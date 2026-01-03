@@ -1,0 +1,5 @@
+Flask==3.0.0
+WeasyPrint==60.1
+num2words==0.5.13
+Jinja2==3.1.2
+gunicorn==21.2.0

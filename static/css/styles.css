@@ -1,0 +1,62 @@
+/* Custom CSS for Invoice Generator */
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.company-title {
+    color: #2c3e50;
+    font-weight: bold;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.company-subtitle {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.table-responsive {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#productsTable {
+    font-size: 0.9rem;
+}
+
+#productsTable input,
+#productsTable select {
+    font-size: 0.85rem;
+}
+
+.text-danger {
+    color: #dc3545;
+}
+
+/* Make required field asterisks stand out */
+.form-label .text-danger {
+    font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .company-title {
+        font-size: 1.5rem;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+}

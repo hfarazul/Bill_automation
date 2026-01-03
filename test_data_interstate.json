@@ -1,0 +1,58 @@
+{
+  "invoice_no": "042",
+  "po": "25PON/NA",
+  "date": "2025-12-30",
+  "mb_number": "9810461926",
+  "billing": {
+    "name": "Star Dental Centre Pvt. Ltd.",
+    "address": "3-B, Sarabha Nagar, Malhar road, Ludhiana - 141002",
+    "gstin": "03AAPCS5927C2ZC",
+    "state": "Punjab",
+    "state_code": "03"
+  },
+  "shipping": {
+    "name": "Star Dental Centre Pvt. Ltd. (Clove Dental)",
+    "address": "3B, Sarabha Nagar, Malhar road, Ludhiana - 141002",
+    "gstin": "03AAPCS5927C2ZC",
+    "state": "Punjab",
+    "state_code": "03"
+  },
+  "products": [
+    {
+      "name": "Centre Table-Rubber Wood laquer Polish",
+      "hsn_code": "44071020",
+      "quantity": 1,
+      "rate": 4500.00,
+      "amount": 4500.00
+    },
+    {
+      "name": "3 Seater-Bench Style-Rubber Wood laquer Polish",
+      "hsn_code": "44071020",
+      "quantity": 1,
+      "rate": 13000.00,
+      "amount": 13000.00
+    },
+    {
+      "name": "2 Seater-Bench Style-Rubber Wood laquer Polish",
+      "hsn_code": "44071020",
+      "quantity": 1,
+      "rate": 9000.00,
+      "amount": 9000.00
+    },
+    {
+      "name": "Visitor Chair Black",
+      "hsn_code": "44071020",
+      "quantity": 8,
+      "rate": 1650.00,
+      "amount": 13200.00
+    },
+    {
+      "name": "Conference Table (48x30)",
+      "hsn_code": "44071020",
+      "quantity": 2,
+      "rate": 6000.00,
+      "amount": 12000.00
+    }
+  ],
+  "packing_charges": 25000.00
+}

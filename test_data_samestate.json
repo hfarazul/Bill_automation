@@ -1,0 +1,37 @@
+{
+  "invoice_no": "043",
+  "po": "TEST/001",
+  "date": "2026-01-03",
+  "mb_number": "9810461926",
+  "billing": {
+    "name": "ABC Dental Clinic",
+    "address": "Connaught Place, New Delhi - 110001",
+    "gstin": "07AABCA1234D1Z5",
+    "state": "Delhi",
+    "state_code": "07"
+  },
+  "shipping": {
+    "name": "ABC Dental Clinic",
+    "address": "Connaught Place, New Delhi - 110001",
+    "gstin": "07AABCA1234D1Z5",
+    "state": "Delhi",
+    "state_code": "07"
+  },
+  "products": [
+    {
+      "name": "Centre Table-Rubber Wood laquer Polish",
+      "hsn_code": "44071020",
+      "quantity": 2,
+      "rate": 5000.00,
+      "amount": 10000.00
+    },
+    {
+      "name": "Visitor Chair Black",
+      "hsn_code": "44071020",
+      "quantity": 10,
+      "rate": 1500.00,
+      "amount": 15000.00
+    }
+  ],
+  "packing_charges": 5000.00
+}

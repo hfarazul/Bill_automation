@@ -1,0 +1,34 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Centre Table-Rubber Wood laquer Polish",
+      "hsn_code": "44071020"
+    },
+    {
+      "id": 2,
+      "name": "3 Seater-Bench Style-Rubber Wood laquer Polish",
+      "hsn_code": "44071020"
+    },
+    {
+      "id": 3,
+      "name": "2 Seater-Bench Style-Rubber Wood laquer Polish",
+      "hsn_code": "44071020"
+    },
+    {
+      "id": 4,
+      "name": "Visitor Chair Black",
+      "hsn_code": "44071020"
+    },
+    {
+      "id": 5,
+      "name": "Conference Table",
+      "hsn_code": "44071020"
+    },
+    {
+      "id": 6,
+      "name": "Conference Table (48x30)",
+      "hsn_code": "44071020"
+    }
+  ]
+}
