@@ -129,8 +129,8 @@ def pdf_to_images(pdf_bytes: bytes, max_pages: int = 2) -> list:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         for page_num in range(min(len(doc), max_pages)):
             page = doc[page_num]
-            # Render at 150 DPI for good quality without huge size
-            mat = fitz.Matrix(150/72, 150/72)
+            # Render at 200 DPI for better text clarity (especially for small text)
+            mat = fitz.Matrix(200/72, 200/72)
             pix = page.get_pixmap(matrix=mat)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             images.append((page_num + 1, img))
@@ -139,6 +139,26 @@ def pdf_to_images(pdf_bytes: bytes, max_pages: int = 2) -> list:
         raise ImportError("PyMuPDF not available. Install with: pip install PyMuPDF")
 
     return images
+
+
+def extract_text_from_pdf(pdf_bytes: bytes, max_pages: int = 2) -> str:
+    """
+    Extract raw text from PDF using PyMuPDF.
+    This provides accurate text without OCR errors.
+    """
+    if PDF_LIBRARY != "pymupdf":
+        raise ImportError("PyMuPDF not available. Install with: pip install PyMuPDF")
+
+    text_content = []
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    for page_num in range(min(len(doc), max_pages)):
+        page = doc[page_num]
+        text = page.get_text("text")
+        text_content.append(f"--- PAGE {page_num + 1} ---\n{text}")
+
+    doc.close()
+    return "\n\n".join(text_content)
 
 
 def image_to_base64(image: Image.Image, max_size: int = 1568) -> str:
@@ -160,12 +180,24 @@ def image_to_base64(image: Image.Image, max_size: int = 1568) -> str:
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
-def build_extraction_prompt() -> str:
+def build_extraction_prompt(include_text_instructions: bool = False) -> str:
     """
     Build the system prompt for GPT-4V to extract invoice/PO data.
     """
-    return """You are an expert at extracting structured data from Indian business documents (invoices, purchase orders, quotations).
+    text_instructions = ""
+    if include_text_instructions:
+        text_instructions = """
+IMPORTANT - HYBRID EXTRACTION MODE:
+You are receiving BOTH:
+1. EXTRACTED TEXT from the PDF (100% accurate - use this for exact values)
+2. IMAGE of the document (use this to understand layout/structure)
 
+For product names, quantities, rates, GSTIN, addresses - ALWAYS use the EXTRACTED TEXT.
+The image helps you understand which text belongs to which field (billing vs shipping, etc.)
+"""
+
+    return f"""You are an expert at extracting structured data from Indian business documents (invoices, purchase orders, quotations).
+{text_instructions}
 IMPORTANT CONTEXT:
 - This document is being processed by Globel Interiors India (GSTIN: 07AWXPS9168G1ZG, Delhi)
 - If this is a Purchase Order, Globel Interiors is the VENDOR/SUPPLIER receiving the order
@@ -182,37 +214,52 @@ EXTRACTION RULES:
 7. Do NOT include packing/cartage unless explicitly listed as a separate line item
 8. For dates, use DD/MM/YYYY format
 
+CRITICAL TABLE READING RULES (for product/item tables):
+1. Read the product table ROW BY ROW using the Sr. No. column as your guide
+2. Each Sr. No. = ONE product entry - NEVER merge multiple rows into one product
+3. Product descriptions may WRAP to multiple lines within the same cell - capture the COMPLETE text
+4. Preserve ALL characters including: quotes ("), dimensions (x), parentheses (), fractions
+5. If a cell spans multiple lines, combine them into one product name (e.g., "Corner table steel stand folding with glass top (2x2)")
+6. COUNT your products - your output count MUST match the number of Sr. No. entries in the table
+7. Use the Price/Rate column (before tax) for the rate field, NOT the Total Amount column
+
+COMMON MISTAKES TO AVOID:
+- Don't truncate names: "Office Table 3\" x 1.5\"" not "Office Table 3"
+- Don't confuse characters: (2x2) is NOT (32), read carefully
+- Don't merge adjacent rows: row 4 and row 5 are SEPARATE products
+- Don't skip rows: if there are 5 Sr. No. entries, output exactly 5 products
+
 OUTPUT FORMAT (JSON only, no markdown):
-{
+{{
   "document_type": "purchase_order" | "invoice" | "quotation",
   "po": "PO number if present",
   "invoice_date": "DD/MM/YYYY format",
-  "billing": {
+  "billing": {{
     "name": "Company/Person name",
     "address": "Full address on one line",
     "gstin": "15-character GSTIN if present",
     "state": "Full state name (e.g., Uttar Pradesh, not UP)",
     "state_code": "2-digit code (e.g., 09)"
-  },
-  "shipping": {
+  }},
+  "shipping": {{
     "name": "Company/Person name",
     "address": "Full address on one line",
     "gstin": "GSTIN if present (often same as billing)",
     "state": "Full state name",
     "state_code": "2-digit code"
-  },
+  }},
   "products": [
-    {
+    {{
       "name": "Product description",
       "hsn_code": "HSN/SAC code",
       "quantity": 1,
       "rate": 1000.00
-    }
+    }}
   ],
   "packing_charges": 0,
   "extraction_confidence": "high" | "medium" | "low",
   "notes": "Any issues or uncertainties"
-}
+}}
 
 If billing and shipping are the same, still populate both with the same values.
 If a field cannot be determined, use null.
@@ -222,6 +269,7 @@ Respond with ONLY the JSON object, no explanations."""
 def extract_data_from_pdf(pdf_bytes: bytes, api_key: str) -> dict:
     """
     Main function to extract invoice data from PDF using GPT-4 Vision.
+    Uses HYBRID approach: extracted text (accurate) + image (for layout).
 
     Args:
         pdf_bytes: Raw PDF file bytes
@@ -233,7 +281,10 @@ def extract_data_from_pdf(pdf_bytes: bytes, api_key: str) -> dict:
     raw_response = None
 
     try:
-        # Convert PDF to images
+        # Extract text directly from PDF (100% accurate - no OCR errors)
+        extracted_text = extract_text_from_pdf(pdf_bytes, max_pages=2)
+
+        # Convert PDF to images (for layout understanding)
         images = pdf_to_images(pdf_bytes, max_pages=2)
 
         if not images:
@@ -254,18 +305,28 @@ def extract_data_from_pdf(pdf_bytes: bytes, api_key: str) -> dict:
         # Initialize OpenAI client
         client = OpenAI(api_key=api_key)
 
-        # Make API call
+        # Build user message with both extracted text and images
+        # Note: Using string concatenation instead of f-string to avoid issues with { } in extracted text
+        user_message = (
+            "Extract the invoice/PO data from this document.\n\n"
+            "=== EXTRACTED TEXT (use this for accurate values) ===\n"
+            + extracted_text +
+            "\n=== END EXTRACTED TEXT ===\n\n"
+            "The images below show the document layout to help you understand the structure:"
+        )
+
+        # Make API call with hybrid approach
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
                     "role": "system",
-                    "content": build_extraction_prompt()
+                    "content": build_extraction_prompt(include_text_instructions=True)
                 },
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract the invoice/PO data from this document:"},
+                        {"type": "text", "text": user_message},
                         *image_content
                     ]
                 }
