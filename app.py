@@ -5,9 +5,14 @@ Flask application for Globel Interiors India Invoice Automation
 from flask import Flask, render_template, request, send_file, jsonify, Response
 import json
 import os
+from dotenv import load_dotenv
 from utils.pdf_generator import generate_invoice_pdf, WEASYPRINT_AVAILABLE
 from utils.tax_calculator import calculate_tax
 from utils.number_to_words import amount_to_words
+from utils.pdf_extractor import extract_data_from_pdf
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -98,6 +103,58 @@ def get_company_info():
         return jsonify(company)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/extract-pdf', methods=['POST'])
+def extract_pdf_data():
+    """
+    Extract invoice/PO data from uploaded PDF using GPT-4 Vision.
+
+    Expects: multipart/form-data with 'pdf' file
+    Returns: JSON with extracted data or error
+    """
+    try:
+        # Check for file in request
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file provided'}), 400
+
+        pdf_file = request.files['pdf']
+
+        if pdf_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Validate file type
+        if not pdf_file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'File must be a PDF'}), 400
+
+        # Check file size (max 10MB)
+        pdf_file.seek(0, 2)  # Seek to end
+        file_size = pdf_file.tell()
+        pdf_file.seek(0)  # Seek back to start
+
+        if file_size > 10 * 1024 * 1024:
+            return jsonify({'error': 'PDF file too large (max 10MB)'}), 400
+
+        # Get API key
+        api_key = os.environ.get('OPENAI_API_KEY')
+        if not api_key or api_key == 'sk-your-api-key-here':
+            return jsonify({'error': 'OpenAI API key not configured. Please set OPENAI_API_KEY in .env file'}), 500
+
+        # Read PDF bytes
+        pdf_bytes = pdf_file.read()
+
+        # Extract data
+        result = extract_data_from_pdf(pdf_bytes, api_key)
+
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        print(f"Error in PDF extraction: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/generate-invoice', methods=['POST'])
 def generate_invoice():

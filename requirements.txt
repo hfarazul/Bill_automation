@@ -3,3 +3,9 @@ WeasyPrint==60.1
 num2words==0.5.13
 Jinja2==3.1.2
 gunicorn==21.2.0
+
+# PDF extraction with LLM
+openai>=1.0.0
+PyMuPDF>=1.23.0
+python-dotenv>=1.0.0
+Pillow>=10.0.0
