@@ -19,6 +19,25 @@
             <p class="company-subtitle">Invoice Generation System</p>
         </div>
 
+        <!-- PDF Upload Section -->
+        <div class="card mb-4 border-primary pdf-upload-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Import from PDF</h5>
+                <span class="badge bg-light text-primary">AI-Powered</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Upload a Purchase Order or Invoice PDF to auto-fill the form using AI.</p>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <input type="file" class="form-control" id="pdfUpload" accept=".pdf" style="max-width: 400px;">
+                    <button type="button" class="btn btn-primary" id="extractPdfBtn" disabled>
+                        <span class="spinner-border spinner-border-sm d-none" id="extractSpinner"></span>
+                        <span id="extractBtnText">Extract Data</span>
+                    </button>
+                </div>
+                <small class="text-muted mt-2 d-block">Supported: Purchase Orders, Invoices, Quotations (max 10MB)</small>
+            </div>
+        </div>
+
         <!-- Invoice Form -->
         <form id="invoiceForm">
             <!-- Invoice Details Section -->
@@ -215,6 +234,131 @@
             </div>
         </form>
     </div>
+
+    <!-- Preview Modal for PDF Extraction -->
+    <div class="modal fade" id="previewModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Review Extracted Data</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Confidence Badge -->
+                    <div class="alert alert-info d-flex flex-wrap align-items-center mb-3" id="confidenceAlert">
+                        <span class="me-2">Extraction Confidence:</span>
+                        <span class="badge me-3" id="confidenceBadge">-</span>
+                        <span class="text-muted small" id="extractionNotes"></span>
+                    </div>
+
+                    <div class="row">
+                        <!-- Left Column: Document Info -->
+                        <div class="col-lg-6">
+                            <h6 class="border-bottom pb-2">Document Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Document Type</label>
+                                <input type="text" class="form-control form-control-sm" id="previewDocType" readonly>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">PO Number</label>
+                                    <input type="text" class="form-control form-control-sm" id="previewPO">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Date</label>
+                                    <input type="text" class="form-control form-control-sm" id="previewDate">
+                                </div>
+                            </div>
+
+                            <h6 class="border-bottom pb-2 mt-4">Billing Details</h6>
+                            <div class="mb-2">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control form-control-sm" id="previewBillingName">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-control form-control-sm" id="previewBillingAddress" rows="2"></textarea>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <label class="form-label">GSTIN</label>
+                                    <input type="text" class="form-control form-control-sm" id="previewBillingGstin">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">State</label>
+                                    <select class="form-select form-select-sm" id="previewBillingState"></select>
+                                </div>
+                            </div>
+
+                            <h6 class="border-bottom pb-2 mt-4">Shipping Details</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="previewSameAsBilling">
+                                <label class="form-check-label" for="previewSameAsBilling">Same as Billing</label>
+                            </div>
+                            <div id="previewShippingFields">
+                                <div class="mb-2">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" class="form-control form-control-sm" id="previewShippingName">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control form-control-sm" id="previewShippingAddress" rows="2"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="form-label">GSTIN</label>
+                                        <input type="text" class="form-control form-control-sm" id="previewShippingGstin">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">State</label>
+                                        <select class="form-select form-select-sm" id="previewShippingState"></select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Products -->
+                        <div class="col-lg-6 mt-4 mt-lg-0">
+                            <h6 class="border-bottom pb-2">Products</h6>
+                            <div class="table-responsive" style="max-height: 350px;">
+                                <table class="table table-sm table-bordered" id="previewProductsTable">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Product Name</th>
+                                            <th style="width: 80px;">HSN</th>
+                                            <th style="width: 60px;">Qty</th>
+                                            <th style="width: 100px;">Rate</th>
+                                            <th style="width: 40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewProductRows">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addPreviewProductBtn">
+                                + Add Product
+                            </button>
+
+                            <div class="mt-3">
+                                <label class="form-label">Packing/Cartage Charges (₹)</label>
+                                <input type="number" class="form-control form-control-sm" id="previewPackingCharges" value="0" style="max-width: 150px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="applyExtractedDataBtn">
+                        Apply to Form
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

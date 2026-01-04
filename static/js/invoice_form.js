@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     addProductRow(); // Add first row by default (after products loaded)
     setupEventListeners();
     setTodayDate();
+    setupPdfExtraction(); // Initialize PDF extraction feature
 });
 
 function setTodayDate() {
@@ -525,4 +526,315 @@ function showToast(message, type = 'info') {
         toastElement.classList.remove('show');
         setTimeout(() => toastElement.remove(), 300);
     }, 3000);
+}
+
+// ==========================================
+// PDF Extraction Feature
+// ==========================================
+
+let extractedData = null;
+
+/**
+ * Initialize PDF extraction handlers
+ */
+function setupPdfExtraction() {
+    const pdfInput = document.getElementById('pdfUpload');
+    const extractBtn = document.getElementById('extractPdfBtn');
+
+    if (!pdfInput || !extractBtn) return;
+
+    // Enable button when file selected
+    pdfInput.addEventListener('change', function() {
+        extractBtn.disabled = !this.files.length;
+    });
+
+    // Handle extraction button click
+    extractBtn.addEventListener('click', extractPdfData);
+
+    // Preview modal handlers
+    const sameAsBillingCheck = document.getElementById('previewSameAsBilling');
+    if (sameAsBillingCheck) {
+        sameAsBillingCheck.addEventListener('change', function() {
+            document.getElementById('previewShippingFields').style.display =
+                this.checked ? 'none' : 'block';
+        });
+    }
+
+    const addProductBtn = document.getElementById('addPreviewProductBtn');
+    if (addProductBtn) {
+        addProductBtn.addEventListener('click', function() {
+            addPreviewProductRow();
+        });
+    }
+
+    const applyBtn = document.getElementById('applyExtractedDataBtn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applyExtractedData);
+    }
+
+    // Populate state dropdowns in preview modal
+    populatePreviewStateDropdowns();
+}
+
+/**
+ * Populate state dropdowns in the preview modal
+ */
+function populatePreviewStateDropdowns() {
+    const billingSelect = document.getElementById('previewBillingState');
+    const shippingSelect = document.getElementById('previewShippingState');
+
+    if (!billingSelect || !shippingSelect) return;
+
+    billingSelect.innerHTML = '<option value="">Select State</option>';
+    shippingSelect.innerHTML = '<option value="">Select State</option>';
+
+    for (const [stateName, stateCode] of Object.entries(statesData)) {
+        const option1 = document.createElement('option');
+        option1.value = stateName;
+        option1.textContent = stateName;
+        billingSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = stateName;
+        option2.textContent = stateName;
+        shippingSelect.appendChild(option2);
+    }
+}
+
+/**
+ * Extract data from uploaded PDF
+ */
+async function extractPdfData() {
+    const pdfInput = document.getElementById('pdfUpload');
+    const extractBtn = document.getElementById('extractPdfBtn');
+    const spinner = document.getElementById('extractSpinner');
+    const btnText = document.getElementById('extractBtnText');
+
+    if (!pdfInput.files.length) {
+        showToast('Please select a PDF file', 'warning');
+        return;
+    }
+
+    const file = pdfInput.files[0];
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('PDF file too large. Maximum size is 10MB.', 'error');
+        return;
+    }
+
+    // Show loading state
+    extractBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Extracting...';
+
+    try {
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        const response = await fetch('/api/extract-pdf', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Extraction failed');
+        }
+
+        // Store extracted data and show preview
+        extractedData = result.data;
+        showPreviewModal(extractedData);
+
+    } catch (error) {
+        console.error('PDF extraction error:', error);
+        showToast(`Extraction failed: ${error.message}`, 'error');
+    } finally {
+        // Reset button state
+        extractBtn.disabled = false;
+        spinner.classList.add('d-none');
+        btnText.textContent = 'Extract Data';
+    }
+}
+
+/**
+ * Show preview modal with extracted data
+ */
+function showPreviewModal(data) {
+    // Set confidence badge
+    const confidence = data.extraction_confidence || 'medium';
+    const confidenceBadge = document.getElementById('confidenceBadge');
+    confidenceBadge.textContent = confidence.toUpperCase();
+    confidenceBadge.className = 'badge ' + {
+        'high': 'bg-success',
+        'medium': 'bg-warning text-dark',
+        'low': 'bg-danger'
+    }[confidence];
+
+    // Set notes if any
+    document.getElementById('extractionNotes').textContent = data.notes || '';
+
+    // Document info
+    document.getElementById('previewDocType').value =
+        (data.document_type || 'unknown').replace(/_/g, ' ').toUpperCase();
+    document.getElementById('previewPO').value = data.po || '';
+    document.getElementById('previewDate').value = data.invoice_date || '';
+
+    // Billing details
+    const billing = data.billing || {};
+    document.getElementById('previewBillingName').value = billing.name || '';
+    document.getElementById('previewBillingAddress').value = billing.address || '';
+    document.getElementById('previewBillingGstin').value = billing.gstin || '';
+    document.getElementById('previewBillingState').value = billing.state || '';
+
+    // Shipping details
+    const shipping = data.shipping || {};
+
+    // Check if billing and shipping are the same
+    const isSameAsBilling =
+        billing.name === shipping.name &&
+        billing.address === shipping.address &&
+        billing.gstin === shipping.gstin;
+
+    document.getElementById('previewSameAsBilling').checked = isSameAsBilling;
+    document.getElementById('previewShippingFields').style.display =
+        isSameAsBilling ? 'none' : 'block';
+    document.getElementById('previewShippingName').value = shipping.name || '';
+    document.getElementById('previewShippingAddress').value = shipping.address || '';
+    document.getElementById('previewShippingGstin').value = shipping.gstin || '';
+    document.getElementById('previewShippingState').value = shipping.state || '';
+
+    // Products
+    const productsBody = document.getElementById('previewProductRows');
+    productsBody.innerHTML = '';
+
+    (data.products || []).forEach((product) => {
+        addPreviewProductRow(product);
+    });
+
+    // Packing charges
+    document.getElementById('previewPackingCharges').value = data.packing_charges || 0;
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+/**
+ * Add a product row to the preview table
+ */
+function addPreviewProductRow(product = null) {
+    const tbody = document.getElementById('previewProductRows');
+    const row = document.createElement('tr');
+
+    row.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm preview-product-name" value="${escapeHtml(product?.name || '')}"></td>
+        <td><input type="text" class="form-control form-control-sm preview-hsn" value="${escapeHtml(product?.hsn_code || '44071020')}"></td>
+        <td><input type="number" class="form-control form-control-sm preview-qty" value="${product?.quantity || 1}" min="1"></td>
+        <td><input type="number" class="form-control form-control-sm preview-rate" value="${product?.rate || 0}" step="0.01"></td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button></td>
+    `;
+
+    tbody.appendChild(row);
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Apply extracted data to the main form
+ */
+function applyExtractedData() {
+    // Get values from preview modal
+    const po = document.getElementById('previewPO').value;
+    const dateStr = document.getElementById('previewDate').value;
+
+    // Set PO
+    document.getElementById('po').value = po;
+
+    // Parse and set date (convert DD/MM/YYYY to YYYY-MM-DD for input[type=date])
+    if (dateStr) {
+        const dateParts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dateParts) {
+            const isoDate = `${dateParts[3]}-${dateParts[2]}-${dateParts[1]}`;
+            document.getElementById('invoiceDate').value = isoDate;
+        }
+    }
+
+    // Billing details
+    document.getElementById('billingName').value = document.getElementById('previewBillingName').value;
+    document.getElementById('billingAddress').value = document.getElementById('previewBillingAddress').value;
+    document.getElementById('billingGstin').value = document.getElementById('previewBillingGstin').value;
+    document.getElementById('billingState').value = document.getElementById('previewBillingState').value;
+    updateStateCode('billing');
+
+    // Shipping details
+    const sameAsBilling = document.getElementById('previewSameAsBilling').checked;
+    document.getElementById('sameAsBilling').checked = sameAsBilling;
+
+    if (sameAsBilling) {
+        copyBillingToShipping();
+    } else {
+        document.getElementById('shippingName').value = document.getElementById('previewShippingName').value;
+        document.getElementById('shippingAddress').value = document.getElementById('previewShippingAddress').value;
+        document.getElementById('shippingGstin').value = document.getElementById('previewShippingGstin').value;
+        document.getElementById('shippingState').value = document.getElementById('previewShippingState').value;
+        updateStateCode('shipping');
+    }
+
+    // Clear existing product rows
+    document.getElementById('productRows').innerHTML = '';
+    productRowCounter = 0;
+
+    // Add products from preview
+    const previewRows = document.querySelectorAll('#previewProductRows tr');
+    previewRows.forEach(row => {
+        const name = row.querySelector('.preview-product-name').value.trim();
+        const hsn = row.querySelector('.preview-hsn').value.trim();
+        const qty = parseInt(row.querySelector('.preview-qty').value) || 1;
+        const rate = parseFloat(row.querySelector('.preview-rate').value) || 0;
+
+        if (name) {
+            addProductRow();
+            const rowId = productRowCounter;
+            document.getElementById(`productName${rowId}`).value = name;
+            document.getElementById(`hsnCode${rowId}`).value = hsn;
+            document.getElementById(`quantity${rowId}`).value = qty;
+            document.getElementById(`rate${rowId}`).value = rate;
+            calculateRowAmount(rowId);
+        }
+    });
+
+    // If no products were added, add empty row
+    if (document.getElementById('productRows').children.length === 0) {
+        addProductRow();
+    }
+
+    // Packing charges
+    document.getElementById('packingCharges').value =
+        document.getElementById('previewPackingCharges').value || 0;
+
+    // Recalculate totals
+    calculateTotals();
+
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('previewModal')).hide();
+
+    // Show success message
+    showToast('Data applied to form successfully!', 'success');
+
+    // Clear file input
+    document.getElementById('pdfUpload').value = '';
+    document.getElementById('extractPdfBtn').disabled = true;
+
+    // Scroll to invoice details section
+    document.getElementById('invoiceForm').scrollIntoView({ behavior: 'smooth' });
 }

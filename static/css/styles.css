@@ -77,6 +77,57 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* PDF Upload Section */
+.pdf-upload-card {
+    border-width: 2px !important;
+}
+
+#pdfUpload {
+    cursor: pointer;
+}
+
+/* Preview Modal */
+#previewModal .modal-header {
+    border-bottom: 2px solid #198754;
+}
+
+#previewModal .form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+#previewModal .form-control-sm,
+#previewModal .form-select-sm {
+    font-size: 0.85rem;
+}
+
+#previewProductsTable th {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+}
+
+#previewProductsTable td {
+    padding: 0.25rem;
+}
+
+#previewProductsTable input {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Confidence badges */
+#confidenceAlert {
+    font-size: 0.9rem;
+}
+
+/* Responsive modal */
+@media (max-width: 992px) {
+    #previewModal .modal-body .row > div {
+        margin-bottom: 1.5rem;
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .company-title {
