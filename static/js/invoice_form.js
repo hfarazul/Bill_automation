@@ -158,6 +158,9 @@ function addProductRow() {
     `;
 
     tbody.appendChild(row);
+
+    // Auto-scroll to new row (smooth scroll for better UX on mobile)
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function fillProductDetails(selectElement, rowId) {
