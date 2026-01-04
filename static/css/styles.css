@@ -59,4 +59,94 @@ body {
     .table-responsive {
         font-size: 0.8rem;
     }
+
+    /* Mobile: Convert product table to card layout */
+    #productsTable thead {
+        display: none;
+    }
+
+    #productsTable,
+    #productsTable tbody,
+    #productsTable tr,
+    #productsTable td {
+        display: block;
+        width: 100%;
+    }
+
+    #productsTable tr {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    #productsTable td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 5px;
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+
+    #productsTable td:last-child {
+        border-bottom: none;
+        justify-content: center;
+        padding-top: 10px;
+    }
+
+    #productsTable td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #495057;
+        flex: 0 0 40%;
+        text-align: left;
+    }
+
+    #productsTable td:first-child {
+        background: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    #productsTable td:first-child:before {
+        content: "Product #";
+    }
+
+    #productsTable td input,
+    #productsTable td select {
+        flex: 1;
+        max-width: 60%;
+    }
+
+    #productsTable td:last-child input,
+    #productsTable td:last-child select,
+    #productsTable td:last-child button {
+        max-width: 100%;
+    }
+
+    /* Make delete button full width on mobile */
+    #productsTable td:last-child button {
+        width: 100%;
+        padding: 8px;
+    }
+
+    /* Product dropdown needs more space */
+    #productsTable td:nth-child(2) {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #productsTable td:nth-child(2):before {
+        margin-bottom: 5px;
+    }
+
+    #productsTable td:nth-child(2) select,
+    #productsTable td:nth-child(2) input {
+        max-width: 100%;
+        width: 100%;
+    }
 }

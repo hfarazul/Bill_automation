@@ -129,28 +129,28 @@ function addProductRow() {
     row.id = `productRow${productRowCounter}`;
 
     row.innerHTML = `
-        <td class="text-center">${productRowCounter}</td>
-        <td>
+        <td class="text-center" data-label="Sr. No.">${productRowCounter}</td>
+        <td data-label="Product">
             <select class="form-select form-select-sm mb-1 product-select" onchange="fillProductDetails(this, ${productRowCounter})">
                 <option value="">-- Select from Catalog --</option>
                 ${productsData.map(p => `<option value="${p.id}" data-hsn="${p.hsn_code}">${p.name}</option>`).join('')}
             </select>
-            <input type="text" class="form-control form-control-sm product-name" placeholder="Or enter product name manually" id="productName${productRowCounter}">
+            <input type="text" class="form-control form-control-sm product-name" placeholder="Or enter manually" id="productName${productRowCounter}">
         </td>
-        <td>
+        <td data-label="HSN Code">
             <input type="text" class="form-control form-control-sm hsn-code" id="hsnCode${productRowCounter}" value="44071020">
         </td>
-        <td>
+        <td data-label="Quantity">
             <input type="number" class="form-control form-control-sm quantity" id="quantity${productRowCounter}" min="1" value="1" onchange="calculateRowAmount(${productRowCounter})">
         </td>
-        <td>
+        <td data-label="Rate (₹)">
             <input type="number" class="form-control form-control-sm rate" id="rate${productRowCounter}" step="0.01" min="0" value="0" onchange="calculateRowAmount(${productRowCounter})">
         </td>
-        <td>
+        <td data-label="Amount (₹)">
             <input type="number" class="form-control form-control-sm amount" id="amount${productRowCounter}" readonly value="0">
         </td>
-        <td class="text-center">
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeProductRow(${productRowCounter})">×</button>
+        <td class="text-center" data-label="">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeProductRow(${productRowCounter})">Remove</button>
         </td>
     `;
 
