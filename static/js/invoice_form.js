@@ -135,10 +135,13 @@ function addProductRow() {
                 <option value="">-- Select from Catalog --</option>
                 ${productsData.map(p => `<option value="${p.id}" data-hsn="${p.hsn_code}">${p.name}</option>`).join('')}
             </select>
-            <input type="text" class="form-control form-control-sm product-name" placeholder="Or enter manually" id="productName${productRowCounter}">
+            <div class="input-group input-group-sm">
+                <input type="text" class="form-control form-control-sm product-name" placeholder="Or enter manually" id="productName${productRowCounter}" oninput="toggleSaveButton(${productRowCounter})">
+                <button type="button" class="btn btn-outline-success btn-sm save-to-catalog-btn" id="saveBtn${productRowCounter}" onclick="saveProductToCatalog(${productRowCounter})" title="Save to Catalog" style="display: none;">+</button>
+            </div>
         </td>
         <td data-label="HSN Code">
-            <input type="text" class="form-control form-control-sm hsn-code" id="hsnCode${productRowCounter}" value="44071020">
+            <input type="text" class="form-control form-control-sm hsn-code" id="hsnCode${productRowCounter}" value="44071020" oninput="toggleSaveButton(${productRowCounter})">
         </td>
         <td data-label="Quantity">
             <input type="number" class="form-control form-control-sm quantity" id="quantity${productRowCounter}" min="1" value="1" onchange="calculateRowAmount(${productRowCounter})">
@@ -352,4 +355,171 @@ async function submitInvoice() {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Generate Invoice PDF';
     }
+}
+
+/**
+ * Show/hide save button based on manual input
+ */
+function toggleSaveButton(rowId) {
+    const productName = document.getElementById(`productName${rowId}`).value.trim();
+    const hsnCode = document.getElementById(`hsnCode${rowId}`).value.trim();
+    const saveBtn = document.getElementById(`saveBtn${rowId}`);
+    const productSelect = document.querySelector(`#productRow${rowId} .product-select`);
+
+    // Show save button only if:
+    // 1. Product name is manually entered (not empty, dropdown not selected)
+    // 2. HSN code is present
+    // 3. Product doesn't already exist in catalog
+    const isManualEntry = productSelect.value === '' && productName.length > 0;
+    const hasHsn = hsnCode.length > 0;
+    const existsInCatalog = productsData.some(
+        p => p.name.toLowerCase() === productName.toLowerCase()
+    );
+
+    if (isManualEntry && hasHsn && !existsInCatalog) {
+        saveBtn.style.display = 'inline-block';
+    } else {
+        saveBtn.style.display = 'none';
+    }
+}
+
+/**
+ * Save product to catalog via API
+ */
+async function saveProductToCatalog(rowId) {
+    const productName = document.getElementById(`productName${rowId}`).value.trim();
+    const hsnCode = document.getElementById(`hsnCode${rowId}`).value.trim();
+    const saveBtn = document.getElementById(`saveBtn${rowId}`);
+
+    // Validate
+    if (!productName) {
+        showToast('Please enter a product name', 'error');
+        return;
+    }
+    if (!hsnCode) {
+        showToast('Please enter an HSN code', 'error');
+        return;
+    }
+
+    // Check for duplicate in local data first
+    if (productsData.some(p => p.name.toLowerCase() === productName.toLowerCase())) {
+        showToast('This product already exists in the catalog', 'warning');
+        return;
+    }
+
+    // Disable button and show loading
+    saveBtn.disabled = true;
+    const originalContent = saveBtn.innerHTML;
+    saveBtn.innerHTML = '...';
+
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: productName,
+                hsn_code: hsnCode
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to save product');
+        }
+
+        // Add new product to local data
+        productsData.push(result.product);
+
+        // Refresh all dropdowns
+        refreshAllProductDropdowns();
+
+        // Hide save button (product now in catalog)
+        saveBtn.style.display = 'none';
+
+        // Show success message
+        showToast(`"${productName}" saved to catalog!`, 'success');
+
+    } catch (error) {
+        console.error('Error saving product:', error);
+        showToast(error.message, 'error');
+
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalContent;
+    }
+}
+
+/**
+ * Refresh all product dropdowns in the form
+ */
+function refreshAllProductDropdowns() {
+    const allSelects = document.querySelectorAll('.product-select');
+
+    allSelects.forEach(select => {
+        // Preserve current selection
+        const currentValue = select.value;
+
+        // Rebuild options
+        select.innerHTML = `
+            <option value="">-- Select from Catalog --</option>
+            ${productsData.map(p =>
+                `<option value="${p.id}" data-hsn="${p.hsn_code}">${p.name}</option>`
+            ).join('')}
+        `;
+
+        // Restore selection if it still exists
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
+/**
+ * Display toast notification
+ */
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Map type to Bootstrap class
+    const bgClass = {
+        'success': 'bg-success',
+        'error': 'bg-danger',
+        'warning': 'bg-warning',
+        'info': 'bg-info'
+    }[type] || 'bg-info';
+
+    const textClass = type === 'warning' ? 'text-dark' : 'text-white';
+
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast ${bgClass} ${textClass}" role="alert">
+            <div class="toast-body d-flex justify-content-between align-items-center">
+                ${message}
+                <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        </div>
+    `;
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+
+    // Show toast and auto-hide after 3 seconds
+    const toastElement = document.getElementById(toastId);
+    toastElement.classList.add('show');
+
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+        setTimeout(() => toastElement.remove(), 300);
+    }, 3000);
 }

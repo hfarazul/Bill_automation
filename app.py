@@ -32,6 +32,55 @@ def get_products():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/products', methods=['POST'])
+def add_product():
+    """Add a new product to the catalog"""
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data.get('name') or not data.get('name').strip():
+            return jsonify({'error': 'Product name is required'}), 400
+
+        if not data.get('hsn_code') or not data.get('hsn_code').strip():
+            return jsonify({'error': 'HSN code is required'}), 400
+
+        # Load existing catalog
+        filepath = os.path.join('config', 'product_catalog.json')
+        with open(filepath, 'r', encoding='utf-8') as f:
+            catalog = json.load(f)
+
+        # Check for duplicate names (case-insensitive)
+        new_name = data['name'].strip()
+        existing_names = [p['name'].lower() for p in catalog['products']]
+        if new_name.lower() in existing_names:
+            return jsonify({'error': 'A product with this name already exists'}), 409
+
+        # Generate new ID
+        max_id = max([p['id'] for p in catalog['products']], default=0)
+        new_id = max_id + 1
+
+        # Create new product
+        new_product = {
+            'id': new_id,
+            'name': new_name,
+            'hsn_code': data['hsn_code'].strip()
+        }
+
+        # Add to catalog and save
+        catalog['products'].append(new_product)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(catalog, f, indent=2, ensure_ascii=False)
+
+        return jsonify({
+            'success': True,
+            'message': 'Product saved to catalog',
+            'product': new_product
+        }), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/states')
 def get_states():
     """Return state codes"""

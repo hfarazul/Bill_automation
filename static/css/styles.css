@@ -50,6 +50,33 @@ body {
     font-weight: bold;
 }
 
+/* Save to Catalog Button */
+.save-to-catalog-btn {
+    padding: 0.25rem 0.5rem;
+    font-weight: bold;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.save-to-catalog-btn:hover {
+    background-color: #198754;
+    color: white;
+}
+
+/* Toast Notifications */
+.toast {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+.toast-container .toast {
+    min-width: 250px;
+    margin-bottom: 0.5rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .company-title {
@@ -148,5 +175,15 @@ body {
     #productsTable td:nth-child(2) input {
         max-width: 100%;
         width: 100%;
+    }
+
+    /* Save button mobile adjustments */
+    #productsTable td:nth-child(2) .input-group {
+        flex-wrap: nowrap;
+    }
+
+    .save-to-catalog-btn {
+        min-width: 36px;
+        padding: 0.4rem 0.5rem;
     }
 }
