@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Invoice - {{ invoice_no }}</title>
+    <style>
+        @page { size: A4; margin: 0.5cm; }
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 5px; }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9pt;
+            line-height: 1.2;
+            margin: 0;
+            padding: 10px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+        }
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #000;
+            margin-bottom: 3px;
+        }
+        .tagline {
+            font-size: 8pt;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        .company-details {
+            font-size: 8pt;
+            color: #333;
+        }
+        .invoice-title {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 5px 0;
+            font-size: 10pt;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5px;
+            font-size: 8pt;
+        }
+        .info-table td, .info-table th {
+            border: 1px solid #000;
+            padding: 3px;
+            vertical-align: top;
+        }
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5px 0;
+            font-size: 8pt;
+        }
+        .product-table th {
+            background-color: #f0f0f0;
+            border: 1px solid #000;
+            padding: 3px;
+            font-weight: bold;
+        }
+        .product-table td {
+            border: 1px solid #000;
+            padding: 3px;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f8f8f8;
+        }
+        .footer {
+            margin-top: 8px;
+            font-size: 8pt;
+        }
+        .footer-note {
+            font-style: italic;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .bank-details {
+            border: 1px solid #000;
+            padding: 5px;
+        }
+        .signature-section {
+            text-align: right;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-name">{{ company_info.company_name }}</div>
+        <div class="tagline">{{ company_info.tagline }}</div>
+        <div class="company-details">
+            {{ company_info.address }}<br>
+            E-mail: {{ company_info.email }} | GSTIN No: {{ company_info.gstin }}
+            {% if mb_number %} | MB: {{ mb_number }}{% endif %}
+        </div>
+    </div>
+
+    <div class="invoice-title">** TAX INVOICE **</div>
+
+    <!-- Invoice Info Table -->
+    <table class="info-table">
+        <tr>
+            <td style="width: 33%;"><strong>Invoice No:</strong> {{ invoice_no }}</td>
+            <td style="width: 33%;"><strong>P.O.:</strong> {{ po if po else 'N/A' }}</td>
+            <td style="width: 34%;"><strong>Date:</strong> {{ date }}</td>
+        </tr>
+    </table>
+
+    <!-- Billing and Shipping Table -->
+    <table class="info-table">
+        <tr>
+            <td style="width: 50%;">
+                <strong>Details of Receiver | Billed to:</strong><br>
+                <strong>Name:</strong> {{ billing.name }}<br>
+                <strong>Address:</strong> {{ billing.address }}<br>
+                {% if billing.gstin %}<strong>GSTIN:</strong> {{ billing.gstin }}<br>{% endif %}
+                <strong>State:</strong> {{ billing.state }}<br>
+                <strong>State code:</strong> {{ billing.state_code }}
+            </td>
+            <td style="width: 50%;">
+                <strong>Details of Consignee | Shipped to:</strong><br>
+                <strong>Name:</strong> {{ shipping.name }}<br>
+                <strong>Address:</strong> {{ shipping.address }}<br>
+                {% if shipping.gstin %}<strong>GSTIN:</strong> {{ shipping.gstin }}<br>{% endif %}
+                <strong>State:</strong> {{ shipping.state }}<br>
+                <strong>State code:</strong> {{ shipping.state_code }}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Products Table -->
+    <table class="product-table">
+        <thead>
+            <tr>
+                <th style="width: 4%;">Sr. No.</th>
+                <th style="width: 45%;">Name of Product/Service</th>
+                <th style="width: 10%;">HSN Code</th>
+                <th style="width: 6%;">QTY.</th>
+                <th style="width: 15%;">Rate</th>
+                <th style="width: 20%;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td class="text-center">{{ loop.index }}</td>
+                <td>{{ product.name }}</td>
+                <td class="text-center">{{ product.hsn_code }}</td>
+                <td class="text-center">{{ product.quantity }}</td>
+                <td class="text-right">{{ "%.2f"|format(product.rate) }}</td>
+                <td class="text-right">{{ "%.2f"|format(product.amount) }}</td>
+            </tr>
+            {% endfor %}
+
+            <!-- Totals Section -->
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right"><strong>TOTAL</strong></td>
+                <td class="text-right"><strong>{{ "%.2f"|format(subtotal) }}</strong></td>
+            </tr>
+
+            {% if packing_charges > 0 %}
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right">Packing / Cartage</td>
+                <td class="text-right">{{ "%.2f"|format(packing_charges) }}</td>
+            </tr>
+            {% endif %}
+
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right"><strong>Total Amount Before Tax</strong></td>
+                <td class="text-right"><strong>{{ "%.2f"|format(total_before_tax) }}</strong></td>
+            </tr>
+
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right">Add:- CGST @ 9%</td>
+                <td class="text-right">{% if tax_type == 'SGST' %}{{ "%.2f"|format(cgst) }}{% else %}NA{% endif %}</td>
+            </tr>
+
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right">Add:- SGST @ 9%</td>
+                <td class="text-right">{% if tax_type == 'SGST' %}{{ "%.2f"|format(sgst) }}{% else %}NA{% endif %}</td>
+            </tr>
+
+            <tr>
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right">Add:- IGST @ 18%</td>
+                <td class="text-right">{% if tax_type == 'IGST' %}{{ "%.2f"|format(igst) }}{% else %}NA{% endif %}</td>
+            </tr>
+
+            <tr class="total-row">
+                <td colspan="4" style="border-top: none; border-bottom: none; border-right: none;"></td>
+                <td class="text-right"><strong>Total Amount After Tax</strong></td>
+                <td class="text-right"><strong>{{ "%.2f"|format(total_after_tax) }}</strong></td>
+            </tr>
+
+            <tr>
+                <td colspan="6" style="padding: 5px;">
+                    <strong>Total Invoice Amount in Words:- {{ amount_in_words }}</strong>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p style="margin: 3px 0;"><strong>{{ company_info.jurisdiction }}</strong></p>
+
+        <div class="footer-note" style="margin: 3px 0;">
+            This is a computer generated invoice no signature required.
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+            <tr>
+                <td style="width: 65%; vertical-align: top;">
+                    <div class="bank-details">
+                        <strong>For {{ company_info.company_name }}</strong><br>
+                        <strong>Bank Name:</strong> {{ company_info.bank_name }}<br>
+                        <strong>Bank A/C:</strong> {{ company_info.bank_account }}<br>
+                        <strong>Branch:</strong> {{ company_info.bank_branch }}<br>
+                        <strong>IFSC CODE:</strong> {{ company_info.bank_ifsc }}
+                    </div>
+                </td>
+                <td style="width: 35%; vertical-align: bottom; text-align: right;">
+                    <div class="signature-section">
+                        <img src="{{ url_for('static', filename='images/signature.png') }}" alt="Signature" style="max-width: 150px; height: auto;"><br>
+                        <strong>SIGNATURE</strong>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Print to PDF Button -->
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+        <button onclick="window.print()" style="
+            background-color: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        ">
+            📄 Save as PDF (Ctrl+P)
+        </button>
+    </div>
+
+    <script>
+        // Auto-trigger print dialog on page load (optional - comment out if annoying)
+        // window.addEventListener('load', function() {
+        //     setTimeout(() => window.print(), 500);
+        // });
+    </script>
+</body>
+</html>

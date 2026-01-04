@@ -39,9 +39,8 @@ instance/
 *~
 .DS_Store
 
-# Generated files
-generated_invoices/
-*.html
+# Generated files (keep templates and generated_invoices in git)
+# Only ignore PDFs
 *.pdf
 
 # Logs
