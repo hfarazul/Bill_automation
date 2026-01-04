@@ -9,11 +9,11 @@ let productsData = [];
 let companyData = {};
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadStates();
-    loadProducts();
-    loadCompanyInfo();
-    addProductRow(); // Add first row by default
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadStates();
+    await loadProducts();
+    await loadCompanyInfo();
+    addProductRow(); // Add first row by default (after products loaded)
     setupEventListeners();
     setTodayDate();
 });
