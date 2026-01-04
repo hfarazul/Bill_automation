@@ -39,9 +39,8 @@ instance/
 *~
 .DS_Store
 
-# Generated files (keep templates and generated_invoices in git)
-# Only ignore PDFs
-*.pdf
+# Generated invoices folder
+generated_invoices/
 
 # Logs
 *.log
