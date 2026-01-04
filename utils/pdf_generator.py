@@ -8,9 +8,9 @@ import os
 try:
     from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError) as e:
     WEASYPRINT_AVAILABLE = False
-    print("WeasyPrint not installed. PDF generation will return a placeholder.")
+    print(f"WeasyPrint not available: {e}. Will return HTML instead.")
 
 def generate_invoice_pdf(data):
     """
@@ -42,11 +42,18 @@ def generate_invoice_pdf(data):
         html_string = render_template('invoice_template.html', **data)
 
         if WEASYPRINT_AVAILABLE:
-            # Generate PDF using WeasyPrint
-            pdf_file = BytesIO()
-            HTML(string=html_string, base_url=base_path).write_pdf(pdf_file)
-            pdf_file.seek(0)
-            return pdf_file
+            try:
+                # Generate PDF using WeasyPrint
+                pdf_bytes = HTML(string=html_string, base_url=base_path).write_pdf()
+                pdf_file = BytesIO(pdf_bytes)
+                return pdf_file
+            except Exception as pdf_error:
+                print(f"WeasyPrint PDF generation failed: {pdf_error}")
+                # Fall back to HTML
+                pdf_file = BytesIO()
+                pdf_file.write(html_string.encode('utf-8'))
+                pdf_file.seek(0)
+                return pdf_file
         else:
             # Return HTML as placeholder for testing
             pdf_file = BytesIO()
